@@ -90,6 +90,12 @@ const DEFAULT_WS: &str = "ws://127.0.0.1:7509";
 const DEFAULT_INSTANCE_ID: &str = "CVXFNq3Qkddupfpn1mCT597pYy254Y2Zvv7woK9ar6cm";
 const DEFAULT_CODE_HASH: &str = "3PYNPAX8Mgic9KUG5yVncJuBY3oJWW57vswMy4QZhWsF";
 
+/// Project source. Linked from the sidebar footer; clicking it opens
+/// the repo in a new tab. The Freenet shell grants the iframe
+/// `allow-popups` so `target=_blank` actually produces a new tab —
+/// otherwise sandbox would silently swallow the navigation.
+const REPO_URL: &str = "https://github.com/Basedfloppa/freenet-webrtc-poc";
+
 /// How often to republish our presence so peers know we're alive.
 const HEARTBEAT_MS: u32 = 15_000;
 /// How often to recompute the online-indicator (cheap, no network).
@@ -303,15 +309,24 @@ fn app() -> Html {
         let current_remote = current_remote.clone();
         let canvas_ref = canvas_ref.clone();
         let republish = republish.clone();
+        let push_log = push_log.clone();
         Rc::new(move |sender_pk: [u8; 32]| {
             let strokes = strokes.clone();
             let current_remote = current_remote.clone();
             let canvas_ref = canvas_ref.clone();
             let my_pk_for_msg = my_pk;
             let republish_for_msg = republish.clone();
+            let push_log = push_log.clone();
             Rc::new(move |s: String| {
                 let mut parts = s.split(',');
                 let op = parts.next().unwrap_or("");
+                // Log replay-class frames so timing issues are visible.
+                if op == "S" || op == "f" {
+                    push_log(
+                        LogLevel::Info,
+                        format!("← replay {op} from {}", short_pk(&sender_pk)),
+                    );
+                }
                 match op {
                     "b" => {
                         // b,<color>,<width>,<x>,<y>  — pen begin
@@ -485,24 +500,43 @@ fn app() -> Html {
                 s.insert(sender_pk);
                 connected_pks.set(s);
 
-                let peer = peers.borrow().get(&sender_pk).cloned();
-                let Some(peer) = peer else { return };
-                let history: Vec<Stroke> = strokes
-                    .borrow()
-                    .iter()
-                    .filter(|s| s.owner == my_pk)
-                    .cloned()
-                    .collect();
-                let count = history.len();
-                for stroke in history {
-                    let _ = peer.send(&stroke_to_wire(&stroke));
-                }
-                if count > 0 {
-                    push_log(
-                        LogLevel::Info,
-                        format!("→ replayed {count} stroke(s) to {}", short_pk(&sender_pk)),
+                // Delay replay slightly so the *peer's* onmessage
+                // handler is guaranteed wired by the time our frames
+                // arrive. The dc may transition to Open faster than
+                // the callee's `ondatachannel` event delivers the
+                // channel + wires its `onmessage` listener — frames
+                // sent in that window get dropped silently.
+                let peers_for_replay = peers.clone();
+                let strokes_for_replay = strokes.clone();
+                let push_log_for_replay = push_log.clone();
+                let win_opt = web_sys::window();
+                let cb = wasm_bindgen::closure::Closure::<dyn FnMut()>::new(move || {
+                    let peer = peers_for_replay.borrow().get(&sender_pk).cloned();
+                    let Some(peer) = peer else { return };
+                    let history: Vec<Stroke> = strokes_for_replay
+                        .borrow()
+                        .iter()
+                        .filter(|s| s.owner == my_pk)
+                        .cloned()
+                        .collect();
+                    let count = history.len();
+                    for stroke in history {
+                        let _ = peer.send(&stroke_to_wire(&stroke));
+                    }
+                    if count > 0 {
+                        push_log_for_replay(
+                            LogLevel::Info,
+                            format!("→ replayed {count} stroke(s) to {}", short_pk(&sender_pk)),
+                        );
+                    }
+                });
+                if let Some(win) = win_opt {
+                    let _ = win.set_timeout_with_callback_and_timeout_and_arguments_0(
+                        cb.as_ref().unchecked_ref(),
+                        500,
                     );
                 }
+                cb.forget();
             })
         })
     };
@@ -1436,6 +1470,16 @@ fn app() -> Html {
                         }
                     }
                 }
+                <footer class="sidebar-footer">
+                    <a
+                        href={REPO_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Source on GitHub"
+                    >
+                        {"github.com/Basedfloppa/freenet-webrtc-poc"}
+                    </a>
+                </footer>
             </aside>
 
             <section class="stage">
