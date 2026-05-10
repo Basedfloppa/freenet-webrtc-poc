@@ -1,0 +1,10 @@
+# Local-only operator data: real IPs, machine paths, test identity
+# seeds. Treat these like passwords — they grant pubkey impersonation
+# on the live contract.
+*.local.md
+*.local.toml
+
+# Standard Rust + Trunk artifacts
+/target
+**/target
+/frontend/dist

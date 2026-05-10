@@ -1,0 +1,7 @@
+# Manifest read by `fdev build`. Standard data contract written in
+# Rust — no webapp bundling. Initial state supplied at publish time
+# via `fdev publish ... --state <path>`.
+
+[contract]
+type = "standard"
+lang = "rust"

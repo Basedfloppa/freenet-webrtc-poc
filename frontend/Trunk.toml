@@ -1,0 +1,13 @@
+[build]
+target = "index.html"
+dist = "dist"
+# SRI disabled: served inside null-origin sandbox iframe; SRI requires
+# CORS, which fails for same-origin assets under opaque origin.
+no_sri = true
+# Asset URLs are emitted with this prefix so they resolve correctly
+# inside the sandbox iframe at /v1/contract/web/<key>/?__sandbox=1.
+public_url = "/v1/contract/web/JCZAdouraT5oQrqrCtAHK1u5fVYyPvFkZKoM35o18CTf/"
+
+[serve]
+address = "127.0.0.1"
+port = 9001

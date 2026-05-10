@@ -1,0 +1,72 @@
+[package]
+name = "webrtc-poc-frontend"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "frontend"
+path = "src/main.rs"
+
+[dependencies]
+shared = { package = "webrtc-poc-shared", path = "../shared" }
+yew = { version = "0.21", features = ["csr"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bincode = "1"
+log = "0.4"
+wasm-logger = "0.2"
+hex = "0.4"
+bs58 = "0.5"
+js-sys = "0.3"
+
+# Match the same getrandom dance net-graph uses to make ed25519-dalek
+# compile on wasm32-unknown-unknown.
+getrandom = { version = "0.2", features = ["js"] }
+getrandom_v3 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+
+ed25519-dalek = { version = "2", default-features = false, features = ["alloc", "zeroize", "rand_core"] }
+rand = { version = "0.8", features = ["std_rng", "small_rng"] }
+
+# Same pinned version as net-graph — talks the bincode wire format the
+# freenet-core nodes currently speak (0.6.1). The local 0.7.0 path-dep
+# would deserialize-mismatch on SubscribeResponse.
+freenet-stdlib = { version = "0.6.1", features = ["net"] }
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+    "Window",
+    "Document",
+    "Element",
+    "DomRect",
+    "HtmlElement",
+    "HtmlInputElement",
+    "HtmlButtonElement",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "Storage",
+    "Location",
+    "WebSocket",
+    "BinaryType",
+    "MessageEvent",
+    "ErrorEvent",
+    "CloseEvent",
+    "RtcPeerConnection",
+    "RtcConfiguration",
+    "RtcIceServer",
+    "RtcSdpType",
+    "RtcSessionDescription",
+    "RtcSessionDescriptionInit",
+    "RtcIceCandidate",
+    "RtcIceCandidateInit",
+    "RtcPeerConnectionIceEvent",
+    "RtcIceConnectionState",
+    "RtcDataChannel",
+    "RtcDataChannelInit",
+    "RtcDataChannelEvent",
+    "RtcDataChannelState",
+    "console",
+]
